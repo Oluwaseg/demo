@@ -47,7 +47,7 @@ exports.getLogin = (req, res) => {
 
 exports.getRegister = (req, res) => {
   console.log("Reached getRegister");
-  res.render("register.ejs", { messages: req.flash("error") });
+  res.render("register.ejs");
 };
 
 exports.getLogout = (req, res) => {
@@ -77,26 +77,24 @@ exports.postRegister = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        req.flash("error", "User with the given email already exists");
+        return res.status(400).json("User with the given email already exists");
       } else {
-        req.flash("error", "User with the given username already exists");
+        return res
+          .status(400)
+          .json("User with the given username already exists");
       }
-      return res.redirect("/register");
     }
 
     if (!name || !email || !password || !username) {
-      req.flash("error", "All fields are required..!");
-      return res.redirect("/register");
+      return res.status(400).json("All fields are required..!");
     }
 
     if (!validator.isEmail(email)) {
-      req.flash("error", "Please input a valid email.");
-      return res.redirect("/register");
+      return res.status(400).json("Please input a valid email.");
     }
 
     if (!validator.isStrongPassword(password)) {
-      req.flash("error", "Password must be strong.");
-      return res.redirect("/register");
+      return res.status(400).json("Password must be strong.");
     }
 
     const profileImage = req.file; // Extract the uploaded image
@@ -123,11 +121,18 @@ exports.postRegister = async (req, res) => {
     // Optionally, set the token in a cookie or send it in the response header
     res.cookie("jwt", token, { httpOnly: true });
 
-    // Redirect to login without flash messages
-    return res.redirect("/login");
+    // Flash message and redirect with a delay
+    req.flash(
+      "success",
+      "Registration complete! Redirecting to login in a few seconds."
+    );
+
+    // Add a delay (e.g., 3 seconds) using JavaScript
+    const delayInSeconds = 3;
+    setTimeout(() => res.redirect("/login"), delayInSeconds * 1000);
   } catch (error) {
     console.error("Registration failed:", error);
-    // Redirect to register without flash messages
+    req.flash("error", "Registration failed. Please try again.");
     res.redirect("/register");
   }
 };
