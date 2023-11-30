@@ -1,18 +1,25 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
-const connectDB = require("./api/DB/db.js");
-const routes = require("./api/routes/index");
+const connectDB = require("./DB/db");
+const userRoutes = require("./routes/userRoutes");
 const cors = require("cors");
-const passport = require("passport");
-const flash = require("express-flash");
+const flash = require("connect-flash");
 const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
-const methodOverride = require("method-override");
+dotenv.config();
 
 const app = express();
-dotenv.config();
+
+// Configure session middleware
+app.use(
+  session({
+    secret: process.env.SECRET_KEY, // Use process.env to access environment variables
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
@@ -25,22 +32,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: false }));
 app.use(flash());
-app.use(methodOverride("_method"));
 app.use(express.static("public"));
 app.use("/uploads", express.static("public/uploads"));
 app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
-
-// session-setup
-app.use(
-  session({
-    secret: process.env.SECRET_KEY,
-    resave: false,
-    saveUninitialized: false,
-  })
-);
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 //Multer middleware for uploading images
 const storage = multer.diskStorage({
@@ -54,7 +48,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Use the routes
-app.use("/", routes);
+app.use("/user", userRoutes);
 
 // --------------app.listen -------------
 
