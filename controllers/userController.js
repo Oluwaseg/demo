@@ -77,24 +77,24 @@ exports.postRegister = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        return res.status(400).json("User with the given email already exists");
+        return req.flash("User with the given email already exists");
       } else {
-        return res
-          .status(400)
-          .json("User with the given username already exists");
+        return req.flash("User with the given username already exists");
       }
     }
 
     if (!name || !email || !password || !username) {
-      return res.status(400).json("All fields are required..!");
+      return req.flash("All fields are required..!");
     }
 
     if (!validator.isEmail(email)) {
-      return res.status(400).json("Please input a valid email.");
+      return req.flash("Please input a valid email.");
     }
 
     if (!validator.isStrongPassword(password)) {
-      return res.status(400).json("Password must be strong.");
+      return req.flash(
+        "Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, and one number."
+      );
     }
 
     const profileImage = req.file; // Extract the uploaded image
@@ -122,18 +122,20 @@ exports.postRegister = async (req, res) => {
     res.cookie("jwt", token, { httpOnly: true });
 
     // Flash message and redirect with a delay
+    console.log("Registration successful. Redirecting to login...");
     req.flash(
       "success",
       "Registration complete! Redirecting to login in a few seconds."
     );
-
-    // Add a delay (e.g., 3 seconds) using JavaScript
     const delayInSeconds = 3;
-    setTimeout(() => res.redirect("/login"), delayInSeconds * 1000);
+    setTimeout(() => {
+      console.log("Redirecting now...");
+      res.redirect("/user/login");
+    }, delayInSeconds * 1000);
   } catch (error) {
     console.error("Registration failed:", error);
     req.flash("error", "Registration failed. Please try again.");
-    res.redirect("/register");
+    res.redirect("/user/register");
   }
 };
 
