@@ -1,10 +1,22 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import validator from "validator";
-import path from "path";
-import userModel from "../models/userModel.js";
+const path = require("path");
+const bcrypt = require("bcrypt");
+const validator = require("validator");
+const userModel = require("../models/userModel");
+const jwt = require("jsonwebtoken");
+const multer = require("multer");
 
-const secretKey = process.env.JWT_SECRET; // Retrieve secret key from .env
+const secretKey = process.env.JWT_SECRET;
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "public/uploads");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // Function to create a JWT token for a user
 const createToken = (user) => {
@@ -19,9 +31,12 @@ const createToken = (user) => {
   return token;
 };
 
-exports.registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   try {
+    console.log("Request body:", req.body);
+    console.log("Request file:", req.file);
     const { name, email, password, username } = req.body;
+
     // Check if email or username already exist
     const existingUser = await userModel.findOne({
       $or: [{ email: email }, { username: username }],
@@ -29,23 +44,26 @@ exports.registerUser = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        return res.status(400).json("User with the given email already exists");
+        req.flash("error", "User with the given email already exists");
       } else {
-        return res
-          .status(400)
-          .json("User with the given username already exists");
+        req.flash("error", "User with the given username already exists");
       }
     }
 
     if (!name || !email || !password || !username) {
-      return res.status(400).json("All fields are required..!");
+      req.flash("error", "All fields are required..!");
+      // res.redirect("/user/register");
     }
 
     if (!validator.isEmail(email)) {
-      return res.status(400).json("Please input a valid email.");
+      req.flash("error", "Please input a valid email.");
     }
+
     if (!validator.isStrongPassword(password)) {
-      return res.status(400).json("Password must be strong.");
+      req.flash(
+        "error",
+        "Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, and one number."
+      );
     }
 
     const profileImage = req.file; // Extract the uploaded image
@@ -73,38 +91,44 @@ exports.registerUser = async (req, res) => {
     res.cookie("jwt", token, { httpOnly: true });
 
     // Flash message and redirect with a delay
-    req.flash(
-      "success",
-      "Registration complete! Redirecting to login in a few seconds."
-    );
-
-    // Add a delay (e.g., 3 seconds) using JavaScript
-    const delayInSeconds = 3;
-    setTimeout(() => res.redirect("/login"), delayInSeconds * 1000);
+    // Redirect only if there are no errors
+    if (!req.flash("error").length) {
+      console.log("No errors. Redirecting now...");
+      req.flash(
+        "success",
+        "Registration complete! Redirecting to login in a few seconds."
+      );
+      const delayInSeconds = 3;
+      setTimeout(() => {
+        res.redirect("/auth/login");
+      }, delayInSeconds * 1000);
+    } else {
+      console.log("Errors detected. Redirecting back to registration...");
+      res.redirect("/auth/register");
+    }
   } catch (error) {
     console.error("Registration failed:", error);
     req.flash("error", "Registration failed. Please try again.");
-    res.redirect("/register");
+    res.redirect("/auth/register");
   }
 };
 
-exports.loginUser = async (req, res, next) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await userModel.findOne({ email: email });
 
     if (!user) {
-      req.flash("Invalid email or password");
-
-      return res.redirect("/login");
+      req.flash("error", "Invalid email or password");
+      res.redirect("/auth/login");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      req.flash("Please check your email and password.");
-      return res.redirect("/login");
+      req.flash("error", "Please check your email and password.");
+      res.redirect("/auth/login");
     }
 
     // Authentication successful - create and set JWT token
@@ -119,4 +143,10 @@ exports.loginUser = async (req, res, next) => {
     console.error("An error occurred:", error);
     return next(error);
   }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  upload,
 };

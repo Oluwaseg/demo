@@ -1,9 +1,22 @@
-import express from "express";
-import { registerUser, loginUser } from "../controllers/authController";
-
+const authController = require("../controllers/authController");
+const express = require("express");
 const router = express.Router();
 
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/login", authController.loginUser);
+router.post("/register", authController.registerUser);
 
-export default router;
+router.get("/register", (req, res) => {
+  res.render("register.ejs");
+});
+
+router.get("/login", (req, res) => {
+  res.render("login.ejs");
+});
+
+router.post(
+  "/register",
+  authController.upload.single("profileImage"),
+  authController.registerUser
+);
+
+module.exports = router;

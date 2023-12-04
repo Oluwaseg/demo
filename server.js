@@ -3,11 +3,13 @@ const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const connectDB = require("./DB/db");
 const userRoutes = require("./routes/userRoutes");
+const authRoutes = require("./routes/authRoutes");
 const cors = require("cors");
 const flash = require("express-flash");
 const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
+const cookieParser = require("cookie-parser");
 dotenv.config();
 
 const app = express();
@@ -28,28 +30,21 @@ app.set("view engine", "ejs");
 // Set up middleware
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(flash());
 app.use(express.static("public"));
 app.use("/uploads", express.static("public/uploads"));
 app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 
-//Multer middleware for uploading images
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "public/uploads");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-const upload = multer({ storage: storage });
-
 // Use the routes
 app.use("/user", userRoutes);
-
+app.use("/auth", authRoutes);
+app.get("/", (req, res) => {
+  res.render("index.ejs");
+});
 // --------------app.listen -------------
 
 const PORT = 3000;
