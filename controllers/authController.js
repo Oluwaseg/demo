@@ -9,7 +9,7 @@ const secretKey = process.env.JWT_SECRET;
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "public/uploads");
+    cb(null, "public/uploads/profileImages");
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
@@ -48,15 +48,20 @@ const registerUser = async (req, res) => {
       } else {
         req.flash("error", "User with the given username already exists");
       }
+      res.redirect("/auth/register");
+      return; // Stop execution if there's an existing user
     }
 
     if (!name || !email || !password || !username) {
       req.flash("error", "All fields are required..!");
-      // res.redirect("/user/register");
+      res.redirect("/auth/register");
+      return; // Stop execution if required fields are missing
     }
 
     if (!validator.isEmail(email)) {
       req.flash("error", "Please input a valid email.");
+      res.redirect("/auth/register");
+      return; // Stop execution if email is invalid
     }
 
     if (!validator.isStrongPassword(password)) {
@@ -64,14 +69,16 @@ const registerUser = async (req, res) => {
         "error",
         "Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, and one number."
       );
+      res.redirect("/auth/register");
+      return; // Stop execution if password is weak
     }
 
     const profileImage = req.file; // Extract the uploaded image
     const imageFilePath = profileImage
       ? profileImage.path
-      : "public\\uploads\\default.jpg";
+      : "public\\uploads\\profileImages\\default.png";
 
-    const imageUrl = `/uploads/${path.basename(imageFilePath)}`;
+    const imageUrl = `/uploads/profileImages/${path.basename(imageFilePath)}`;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new userModel({
