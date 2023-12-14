@@ -2,9 +2,32 @@ const authController = require("../controllers/authController");
 const express = require("express");
 const router = express.Router();
 
-router.post("/login", authController.loginUser);
-router.post("/register", authController.registerUser);
+// Apply global token verification middleware
+router.use(authController.verifyToken);
 
+// Apply middleware for specific routes
+router.use("/home", authController.authMiddleware);
+router.use(authController.checkTokenBlacklist);
+
+// Define login and registration routes
+router.post("/login", authController.loginUser);
+router.post(
+  "/register",
+  authController.upload.single("profileImage"),
+  authController.registerUser
+);
+
+// Define home route
+router.get("/home", (req, res) => {
+  console.log("Profile Image:", req.user.profileImage);
+  res.render("home.ejs", {
+    username: req.user.username,
+    name: req.user.name,
+    profileImage: req.user.profileImage,
+  });
+});
+
+// Define registration and login routes
 router.get("/register", (req, res) => {
   res.render("register.ejs");
 });
@@ -13,10 +36,7 @@ router.get("/login", (req, res) => {
   res.render("login.ejs");
 });
 
-router.post(
-  "/register",
-  authController.upload.single("profileImage"),
-  authController.registerUser
-);
+// Define logout route
+router.get("/logout", authController.logoutUser);
 
 module.exports = router;

@@ -25,7 +25,11 @@
             method="POST"
             enctype="multipart/form-data"
           >
-            <% if (messages.error) { %>
+            <% if (messages.success) { %>
+            <div class="alert alert-success" role="alert">
+              <strong> <%= messages.success[0] %></strong>
+            </div>
+            <% } %> <% if (messages.error) { %>
             <div class="alert alert-primary" role="alert">
               <strong> <%= messages.error[0] %> </strong>
             </div>
