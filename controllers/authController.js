@@ -82,7 +82,7 @@ const authMiddleware = (req, res, next) => {
     }
 
     if (req.user) {
-      return res.redirect("/auth/home");
+      return next();
     }
 
     req.user = { ...decoded, tokens: [] };

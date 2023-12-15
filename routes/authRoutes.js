@@ -28,10 +28,16 @@ router.get("/home", (req, res) => {
 
 // Define registration and login routes
 router.get("/register", (req, res) => {
+  if (req.user) {
+    return res.redirect("/auth/home");
+  }
   res.render("register.ejs");
 });
 
 router.get("/login", (req, res) => {
+  if (req.user) {
+    return res.redirect("/auth/home");
+  }
   res.render("login.ejs");
 });
 
