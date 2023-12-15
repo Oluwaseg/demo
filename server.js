@@ -5,9 +5,9 @@ const connectDB = require("./DB/db");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const flash = require("express-flash");
 const session = require("express-session");
-const multer = require("multer");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 dotenv.config();
@@ -22,6 +22,21 @@ app.use(
     saveUninitialized: true,
   })
 );
+
+// Apply rate limiting globally
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  handler: (req, res) => {
+    // Custom response when rate limit is exceeded
+    res.status(429).json({
+      success: false,
+      message: "Too many requests, please try again later.",
+    });
+  },
+});
+
+app.use(limiter);
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));

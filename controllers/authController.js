@@ -6,6 +6,12 @@ const userModel = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 
+const handleErrors = (err, req, res, next) => {
+  console.error("An error occurred:", err);
+  req.flash("error", "An unexpected error occurred. Please try again.");
+  res.redirect("/auth/login");
+};
+
 require("dotenv").config();
 const secretKey = process.env.JWT_SECRET;
 
@@ -18,7 +24,10 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 1024 * 1024 * 2 },
+});
 
 // Function to create a JWT token for a user
 const createToken = (user) => {
@@ -32,8 +41,6 @@ const createToken = (user) => {
 
   const token = jwt.sign(tokenData, secretKey, { expiresIn: "1d" });
 
-  console.log("Token:", token);
-
   return token;
 };
 
@@ -41,7 +48,7 @@ const verifyToken = (req, res, next) => {
   const token = req.cookies.jwt;
 
   if (!token) {
-    return next(); // Proceed to the next middleware if no token is present
+    return next();
   }
 
   jwt.verify(token, secretKey, (err, decodedToken) => {
@@ -56,7 +63,6 @@ const verifyToken = (req, res, next) => {
 };
 
 const authMiddleware = (req, res, next) => {
-  console.log("Auth Middleware triggered");
   res.header("Cache-Control", "private, no-cache, no-store, must-revalidate");
   res.header("Expires", "-1");
   res.header("Pragma", "no-cache");
@@ -69,6 +75,15 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, secretKey);
+
+    if (decoded.exp * 1000 < Date.now()) {
+      req.flash("error", "Session has expired. Please log in again.");
+      return res.redirect("/auth/login");
+    }
+
+    if (req.user) {
+      return res.redirect("/auth/home");
+    }
 
     req.user = { ...decoded, tokens: [] };
 
@@ -91,42 +106,22 @@ const registerUser = async (req, res) => {
         "error",
         "User with the given email or username already exists"
       );
-      // return res
-      //   .status(400)
-      //   .json({ success: false, message: "User already exists" });
     }
 
     if (!name || !email || !password || !username) {
       req.flash("error", "All fields are required..!");
-      // return res
-      //   .status(400)
-      //   .json({ success: false, message: "All fields are required" });
     }
 
     if (!validator.isEmail(email)) {
       req.flash("error", "Please input a valid email.");
-      // return res
-      //   .status(400)
-      //   .json({ success: false, message: "Invalid email format" });
     }
 
-    if (
-      password.length < 6 ||
-      !/[A-Z]/.test(password) ||
-      !/[a-z]/.test(password) ||
-      !/[0-9]/.test(password)
-    ) {
+    if (password.length < 6 || !validator.isStrongPassword(password)) {
       req.flash(
         "error",
-        "Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, and one number."
+        "Password must be strong, containing at least 8 characters, one uppercase letter, one lowercase letter, one number, and one special character."
       );
-      // console.log("Password:", password);
-
-      // return res.status(400).json({
-      //   success: false,
-      //   message:
-      //     "Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, and one number.",
-      // });
+      // Handle the error or redirect accordingly
     }
 
     let imageUrl = "/uploads/profileImages/default.jpg";
@@ -149,10 +144,13 @@ const registerUser = async (req, res) => {
 
     const token = createToken(user);
 
-    // Add the token to the user's tokens array
     user.tokens.push(token);
 
-    res.cookie("jwt", token, { httpOnly: true });
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
 
     await user.save();
 
@@ -164,16 +162,10 @@ const registerUser = async (req, res) => {
     setTimeout(() => {
       res.redirect("/auth/home");
     }, 3000);
-
-    // res.status(200).json({ success: true, message: "Registration complete" });
-
-    // res.redirect("/user/home");
   } catch (error) {
     console.error("Registration failed:", error);
 
     req.flash("error", "Registration failed. Please try again.");
-
-    // res.status(500).json({ success: false, message: "Registration failed" });
 
     res.redirect("/auth/register");
   }
@@ -197,19 +189,20 @@ const loginUser = async (req, res, next) => {
       return res.redirect("/auth/login");
     }
 
-    // Authentication successful - create and set JWT token
     const token = createToken(user);
 
     user.tokens.push(token);
-    await user.save(); // Save the user document with the new token
 
-    // Set req.user to the user document
+    await user.save();
+
     req.user = user;
 
-    // Optionally, set the token in a cookie or send it in the response header
-    res.cookie("jwt", token, { httpOnly: true });
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
 
-    // Redirect to the home page or wherever you want to go after login
     return res.redirect("/auth/home");
   } catch (error) {
     console.error("An error occurred:", error);
@@ -218,23 +211,19 @@ const loginUser = async (req, res, next) => {
 };
 const logoutUser = async (req, res) => {
   try {
-    // Ensure that req.user is defined
     if (!req.user) {
       req.flash("error", "Logout failed. User not authenticated.");
       return res.redirect("/auth/login");
     }
 
-    // Remove the current token from the user's tokens array if it exists
     if (req.user.tokens) {
       req.user.tokens = req.user.tokens.filter(
         (token) => token !== req.cookies.jwt
       );
 
-      // Save the user document without the removed token
       await req.user.save();
     }
 
-    // Clear the JWT cookie
     res.clearCookie("jwt");
 
     req.flash("success", "Logout successful!");
@@ -242,20 +231,16 @@ const logoutUser = async (req, res) => {
   } catch (error) {
     console.error("Logout failed:", error);
     req.flash("error", "Logout failed. Please try again.");
-    res.redirect("/auth/home"); // Redirect to the home page or login page as needed
+    res.redirect("/auth/home");
   }
 };
 
 const checkTokenBlacklist = (req, res, next) => {
   const token = req.cookies.jwt;
 
-  // Check if the token is present and in the user's tokens array
   if (token && req.user?.tokens?.includes(token)) {
-    console.log("Token found in the blacklist");
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  console.log("Token not found in the blacklist");
   next();
 };
 
@@ -267,4 +252,5 @@ module.exports = {
   logoutUser,
   authMiddleware,
   checkTokenBlacklist,
+  handleErrors,
 };

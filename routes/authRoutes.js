@@ -19,7 +19,6 @@ router.post(
 
 // Define home route
 router.get("/home", (req, res) => {
-  console.log("Profile Image:", req.user.profileImage);
   res.render("home.ejs", {
     username: req.user.username,
     name: req.user.name,
