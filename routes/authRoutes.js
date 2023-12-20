@@ -19,7 +19,7 @@ router.post(
 
 // Define home route
 router.get("/home", (req, res) => {
-  res.render("home.ejs", {
+  res.render("home/home.ejs", {
     username: req.user.username,
     name: req.user.name,
     profileImage: req.user.profileImage,
@@ -31,14 +31,14 @@ router.get("/register", (req, res) => {
   if (req.user) {
     return res.redirect("/auth/home");
   }
-  res.render("register.ejs");
+  res.render("auth/register.ejs");
 });
 
 router.get("/login", (req, res) => {
   if (req.user) {
     return res.redirect("/auth/home");
   }
-  res.render("login.ejs");
+  res.render("auth/login.ejs");
 });
 
 // Define logout route

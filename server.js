@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const connectDB = require("./DB/db");
 const userRoutes = require("./routes/userRoutes");
+const blogRoutes = require("./routes/blogRoutes");
 const authRoutes = require("./routes/authRoutes");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
@@ -17,18 +18,16 @@ const app = express();
 // Configure session middleware
 app.use(
   session({
-    secret: process.env.SECRET_KEY, // Use process.env to access environment variables
+    secret: process.env.SECRET_KEY,
     resave: false,
     saveUninitialized: true,
   })
 );
 
-// Apply rate limiting globally
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   handler: (req, res) => {
-    // Custom response when rate limit is exceeded
     res.status(429).json({
       success: false,
       message: "Too many requests, please try again later.",
@@ -57,9 +56,11 @@ app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 // Use the routes
 app.use("/user", userRoutes);
 app.use("/auth", authRoutes);
-app.get("/", (req, res) => {
-  res.render("index.ejs");
-});
+app.use("/articles", blogRoutes);
+// app.get("/", (req, res) => {
+//   res.render("index.ejs");
+// });
+
 // --------------app.listen -------------
 
 const PORT = 3000;

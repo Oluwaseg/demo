@@ -6,12 +6,6 @@ const userModel = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 
-const handleErrors = (err, req, res, next) => {
-  console.error("An error occurred:", err);
-  req.flash("error", "An unexpected error occurred. Please try again.");
-  res.redirect("/auth/login");
-};
-
 require("dotenv").config();
 const secretKey = process.env.JWT_SECRET;
 
@@ -252,5 +246,4 @@ module.exports = {
   logoutUser,
   authMiddleware,
   checkTokenBlacklist,
-  handleErrors,
 };
