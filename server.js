@@ -3,7 +3,6 @@ const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const connectDB = require("./DB/db");
 const userRoutes = require("./routes/userRoutes");
-const blogRoutes = require("./routes/blogRoutes");
 const authRoutes = require("./routes/authRoutes");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
@@ -56,7 +55,6 @@ app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 // Use the routes
 app.use("/user", userRoutes);
 app.use("/auth", authRoutes);
-app.use("/articles", blogRoutes);
 // app.get("/", (req, res) => {
 //   res.render("index.ejs");
 // });

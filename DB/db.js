@@ -9,12 +9,6 @@ const connectDB = async () => {
       useUnifiedTopology: true,
     });
     console.log("Connected to UserDB");
-
-    await mongoose.createConnection(process.env.MONGODB_URL_BLOG, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("Connected to BlogDB");
   } catch (err) {
     console.error("MongoDB Connection Error:", err);
     process.exit(1);
